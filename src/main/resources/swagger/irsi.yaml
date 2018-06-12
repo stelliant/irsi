@@ -1,0 +1,462 @@
+﻿---
+swagger: "2.0"
+info:
+  description: "# Introduction\nCette documentation décrit l’interface, le mode d’\
+    utilisation et le comportement des Services Web REST mis à disposition des experts\
+    \ par GCA et DARVA pour le dépôt de REC dans le cadre de la phase d'observation\
+    \ de la convention IRSI. Elle est destinée aux équipes techniques en charge de\
+    \ l’intégration des appels des Services Web dans le SI des utilisateurs du service.\n\
+    \n# Format et description des données échangées\nLes données échangées lors de\
+    \ l’appel d’un service, en entrée comme en sortie sont au format JSON. Les structures\
+    \ de ces échanges sont décrites dans la suite de cette documentation. Les flux\
+    \ émis doivent obligatoirement être encodés en UTF-8.\n\nIl faut noter toutefois\
+    \ que les messages EDI échangés via ces Web Services ne sont qu’une donnée parmi\
+    \ d’autres, ces flux EDI étant quant à eux au format XML v3 respectant les sché\
+    mas xml de la norme diffusée par DARVA.\n\n# Sécurité\nLes Web Services sont exposé\
+    s sur le canal internet, avec un chiffrement des flux selon la norme SSL V3 et\
+    \ une clé de chiffrement de 256 bits (certificat Certinomis).\n\nL’identification\
+    \ et l’authentification du système client des Web Services s’appuie sur le mé\
+    canisme \"basic auth\" du protocole HTTP tel que définie dans la RFC 2617.\n\n\
+    # Paramètres de l'url de base\nLes paramètres de base de l'url pour toutes les\
+    \ ressources de l'API sont les suivants :\n\n* environnement : Nom de l'environnement\
+    \ à atteindre\n\t* Production : darva.com\n  * VABF : vabf.darva.com\n* codeAssureur\
+    \ : Le paramètre « codeAssureur » peut éventuellement être porteur de 2 informations\
+    \ :\n  * Le code GTA de l'assureur proprement-dit\n  * Le code complémentaire\
+    \ assureur si nécessaire. Dans ce cas, le format du paramètre « codeAssureur »\
+    \ est xxxxxxxx-yyyyyy ou xxxxxxxx représente le code assureur et yyyyyy repré\
+    sente le code complémentaire assureur.\n\n# Exemples de cas d'utilisation\n##\
+    \ Déposer un document sur le système DARVA\nL’émission de documents sur le centre\
+    \ serveur DARVA à destination d’un autre partenaire suit la séquence décrite dans\
+    \ le diagramme suivant :\n\n![](./IllustrationDepotDocument.png)\n\n\nLe stockage\
+    \ du document par le service est fait en mode asynchrone grâce au service \"POST\
+    \ /demandesdepots\". Pour connaître l’état de sa demande, le système client doit\
+    \ donc réinterroger ultérieurement le système en lui indiquant l’identifiant de\
+    \ transaction fourni au moment du dépôt du message (avec le service \"GET /demandesdepots/{idDemande}\"\
+    ). C’est à ce moment-là qu’il peut obtenir le rapport contenant les warnings et\
+    \ erreurs de traitement du message.\n\n## Récupération du REC au format PDF\n\
+    Il peut être intéressant pour l'émetteur d'un document de le récupérer dans un\
+    \ autre format comme le format PDF. L'accès à un document sur le système DARVA\
+    \ est possible à tout moment en utilisant la ressource :\n\n`/domaines/ird/assureurs/{codeAssureur}/transverse/edi/v1/dossiers/{noSinistre}/{noMission}/messages/{noAbonneEmetteur}/{idMessageEmetteur}`\n\
+    \nCette ressource permet également d'obtenir la liste des pièces-jointes liées\
+    \ au document. Il est alors possible de les récupérer en utilisant la ressource\
+    \ :\n\n`/domaines/ird/assureurs/{codeAssureur}/transverse/edi/v1/messages/{idMessage}/piecesjointes\
+    \ `"
+  version: "1.0"
+  title: "Services web permettant le dépôt des messages liés à l’observation de la\
+    \ convention IRSI"
+  contact: {}
+host: "api.{environnement}"
+basePath: "/domaines/ird/assureurs/{codeAssureur}/irsi/edi/v1"
+schemes:
+- "https"
+consumes:
+- "application/json"
+produces:
+- "application/json"
+security:
+- Basic authentication: []
+paths:
+  /demandesdepots:
+    post:
+      summary: "Demander l'émission d'un REC IRSI."
+      description: "Consignes particulières pour certaines informations contenues\
+        \ dans le flux Json de la donnée \"demandeDepot\" envoyée dans le body :\n\
+        * **indicNormeFuture** : Utilisé pour indiquer que le message respecte la\
+        \ prochaine version de la norme DARVA. Dans la pratique, cette donnée ne peut\
+        \ être alimentée qu’à « false » sur un environnement de production. Elle est\
+        \ utile en VABF où 2 versions de la norme peuvent coexister pour faire des\
+        \ tests avant la mise en production de la nouvelle version de la norme.\n\
+        * **version** (contenu dans \"pieceJointe\" ) : Information libre, utilisable\
+        \ par l'émetteur du message pour indiquer une version de pièce jointe. Le\
+        \ contenu est libre (chaine de caractères)."
+      consumes:
+      - "application/json"
+      parameters:
+      - name: "base"
+        in: "query"
+        required: false
+        type: "string"
+        description: "Indique la base de travail."
+        default: "REELLE"
+        enum:
+        - "REELLE"
+        - "TEST"
+      - name: "modeTest"
+        in: "query"
+        required: false
+        type: "boolean"
+        description: "Permet l’utilisation du service en mode test. Valorisé à « true\
+          \ », aucune mise à jour n’est enregistrée dans le système."
+        default: false
+      - name: "body"
+        in: "body"
+        required: true
+        schema:
+          $ref: "#/definitions/demandedepot"
+        x-examples:
+          application/json: "{\n  \"formatMessageEdi\": \"XML3\",\n  \"indicNormeFuture\"\
+            : false,\n  \"contexte\": \"IRD\",\n  \"messages\": {\n    \"message\"\
+            : {\n      \"typeMessage\": {\n        \"codeMessage\": \"42\",\n    \
+            \    \"verMessage\": \"02\",\n        \"relMessage\": \"01\"\n      },\n\
+            \      \"sousTypeMessage\": \"99\",\n      \"flux\": \"<ME42020199 version=\\\
+            \"3.0\\\" xmlns=\\\"http://www.darva.com/messages/habitation/ir2/\\\"\
+            >    <SE0010201><DE00380101>T79049347973</DE00380101>        <DE00390101>A79000014088</DE00390101><DE00440101>S81</DE00440101>\
+            \    </SE0010201><SE0590301><DE00450101>2015-04-29</DE00450101>      \
+            \  <DT90880101 code=\\\"1\\\"></DT90880101><DT90890101 code=\\\"AB\\\"\
+            ></DT90890101><DE00480101>18</DE00480101> <DE00510101>07</DE00510101><DE00340302>2015-01-16</DE00340302>\
+            \        <DE02230202>190430</DE02230202></SE0590301><SE0780101></SE0780101>\
+            \    <GR010101><SE0020101><DE00460101>372</DE00460101><DE00470101>TGD20150429173719</DE00470101><DE00530101>0000000001</DE00530101><DE00540101>0037881041930587</DE00540101><DE00550101>1979-03-01</DE00550101></SE0020101><SE0030401><DE00560101>d</DE00560101><DCC0500103><DE05350101>nom\
+            \ gest</DE05350101><DE05360101>adresse 1 gest</DE05360101><DE05370101>adresse\
+            \ 2 gest</DE05370101><DE05380101>adresse 3 gest</DE05380101><DE05390101>99999</DE05390101><DE05410101>Localite\
+            \ gest</DE05410101></DCC0500103></SE0030401><SE1600102LIST>          \
+            \  <SE1600102><DT92210102 code=\\\"2\\\"></DT92210102><DE08200102>0303030303</DE08200102></SE1600102></SE1600102LIST>\
+            \    </GR010101><SE0120102LIST><SE0120102><DT90000101 code=\\\"2\\\"></DT90000101><DE00070201>001</DE00070201><DE00080201>test\
+            \                                                                    \
+            \        </DE00080201></SE0120102><SE0120102><DT90000101 code=\\\"M5\\\
+            \"></DT90000101><DE00070201>001</DE00070201><DE00080201>MONIDFMET001</DE00080201></SE0120102></SE0120102LIST></ME42020199>\"\
+            ,\n      \"piecesJointes\": {\n        \"pieceJointe\": [\n          {\n\
+            \            \"idPJ\": \"nomFichier1\",\n            \"libelle\": \"libelle\
+            \ PJ1\",\n            \"type\": \"99\",\n            \"nature\": \"999\"\
+            ,\n            \"format\": \"JPEG\",\n            \"version\": \"v1\"\n\
+            \          },\n          {\n            \"idPJ\": \"nomFichier2\",\n \
+            \           \"libelle\": \"libelle PJ2\",\n            \"type\": \"99\"\
+            ,\n            \"nature\": \"999\",\n            \"format\": \"JPEG\"\
+            ,\n            \"version\": \"v1\"\n          }\n        ]\n      }\n\
+            \    }\n  }\n}"
+      responses:
+        201:
+          description: "La demande a été prise en compte avec succès par le systè\
+            me."
+          schema:
+            required:
+            - "idDemande"
+            type: "object"
+            properties:
+              idDemande:
+                type: "string"
+        403:
+          description: "Le compte utilisateur technique utilisé par le système client\
+            \ n’est pas habilité à utiliser ce service."
+  /demandesdepots/{idDemande}:
+    get:
+      summary: "Connaître l'état d'une demande de dépôts de documents."
+      description: "Consulter l'état d'une demande de dépôt faite précédemment (traitement\
+        \ toujours en cours, traitement terminé, traitement en erreur...). Ce service\
+        \ permet d'obtenir le compte-rendu de traitement du dépôt."
+      parameters:
+      - name: "base"
+        in: "query"
+        required: false
+        type: "string"
+        description: "Indique la base de travail."
+        default: "REELLE"
+        enum:
+        - "REELLE"
+        - "TEST"
+      - name: "resultatDetaille"
+        in: "query"
+        required: false
+        type: "boolean"
+        description: "Indique si l’on souhaite obtenir le rapport complet du traitement\
+          \ du message EDI (préconisations, warnings, erreurs bloquantes)."
+        default: false
+      responses:
+        200:
+          description: "La demande de dépôt a été traitée avec succès par le systè\
+            me. Toutefois, mêmes s'ils sont mineurs et n'empèchent pas la mise à disposition\
+            \ du document, la demande fait l’objet de warning(s). Si la paramètre\
+            \ \"resultatDetaille\" est valorisé à true, le corps de la réponse contient\
+            \ le rapport de traitement du message (avec la liste des des warnings).\n\
+            \n\nLes warnings possibles sont les suivants :\n\n* **E0030** : Validation\
+            \ syntaxique incorrecte de niveau 0 (information) ou 1 (warning).\n  *\
+            \ Exemple 1 : Une valeur de code non autorisée a été envoyée pour une\
+            \ donnée codée (DT).\n  * Exemple 2 : Une donnée numérique a été renseigné\
+            e avec des caractères alphanumériques.\n* **E0040** : Validation sémantique\
+            \ incorrecte : Une règle du cahier des charges n’a pas été respectée.\
+            \ Le niveau de sévérité ne peut être que 0 (information) ou 1 (warning).\n\
+            \n\n* **E0070** : Validation sémantique spécifique client incorrecte :\
+            \ Une règle du cahier des charges spécifique du client n’a pas été respecté\
+            e. Le niveau de sévérité ne peut être que 0 (information) ou 1 (warning).\n\
+            \  * Exemple : Règle spécifique à un contrat de tel ou tel assureur.\n\
+            \  * Remarque : L’implémentation de ce type de contrôles dépend du pé\
+            rimètre considéré.\n\n\n* **E0080** : Validation contexte dossier incorrecte.\
+            \ Le niveau de sévérité ne peut être que 0 (information) ou 1 (warning).\n\
+            \  * Exemple : La note d’honoraire est émise à tort avant le rapport d’\
+            expertise.\n\n\n* **E0081** : Validation contexte dossier spécifique client\
+            \ incorrecte. Le niveau de sévérité ne peut être que 0 (information) ou\
+            \ 1 (warning).\n  * Exemple : La note d’honoraire est émise à tort avant\
+            \ le rapport d’expertise.\n\n\nLes niveaux de sévérités possibles sont\
+            \ les suivants :\n* 0 : Information\n* 1 : Warning, anomalie non bloquante\
+            \ du document"
+          schema:
+            required:
+            - "idDemande"
+            type: "object"
+            properties:
+              idDemande:
+                type: "string"
+                example: "643dsf654"
+              rapport:
+                $ref: "#/definitions/rapport"
+        202:
+          description: "La demande a bien été prise en compte, mais pour des raisons\
+            \ techniques, son intégration complète dans le système n’est pas terminé\
+            . S’il le souhaite, le système client du service pourra vérifier ulté\
+            rieurement que le document a bien été intégré en utilisant la méthode\
+            \ « GET » sur cette même ressource."
+        204:
+          description: "La demande a été traitée avec succès. S'il ne l'a pas déjà\
+            \ fait, le document peut être récupéré par son destinataire."
+        240:
+          description: "La demande de dépôt a été traitée avec succès par le systè\
+            me mais fait l’objet d'au moins une erreur bloquante. Si la paramètre\
+            \ \"resultatDetaille\" est valorisé à true, le corps de la réponse contient\
+            \ le rapport de traitement du message (avec la liste des erreurs et des\
+            \ warnings). Le document ne peut pas être récupéré par le destinataire\
+            \ du message.\n\nLes warnings et erreurs possibles sont les suivants :\n\
+            \n* **E0010** : Contenu de la requête incorrect.\n  * Exemple 1 : La taille\
+            \ des pièces jointes est supérieure à la taille maximale autorisée.\n\
+            \  * Exemple 2 : Le type du message est incorrect.\n\n\n* **E0020** :\
+            \ Utilisateur non autorisé à émettre ce type de document, ou destinataire\
+            \ non autorisé à recevoir ce type de document.\n  * Exemple : OM envoyé\
+            \ par un expert.\n\n\n* **E0021** : L'utilisateur n'est pas autorisé à\
+            \ émettre un message pour le compte d'un autre abonné. Le code abonné\
+            \ de l'utilisateur du service est différent du code abonné émetteur indiqué\
+            \ dans le message EDI. Il doit obligatoirement être le même.\n\n\n* **E0030**\
+            \ : Validation syntaxique incorrecte. Le niveau de sévérité associé à\
+            \ cette erreur indique si le document est mis ou non à disposition du\
+            \ destinataire (voir la description des niveaux de sécurité).\n  * Exemple\
+            \ 1 : Une valeur de code non autorisée a été envoyée pour une donnée codé\
+            e (DT).\n  * Exemple 2 : Une donnée numérique a été renseignée avec des\
+            \ caractères alphanumériques.\n\n\n* **E0040** : Validation sémantique\
+            \ incorrecte : Une règle du cahier des charges n’a pas été respectée.\
+            \ Le niveau de sévérité associé à cette erreur indique si le document\
+            \ est mis ou non à disposition du destinataire (voir la description des\
+            \ niveaux de sécurité).\n\n\n* **E0070** : Validation sémantique spécifique\
+            \ client incorrecte : Une règle du cahier des charges spécifique du client\
+            \ n’a pas été respectée. Le niveau de sévérité associé à cette erreur\
+            \ indique si le document est mis ou non à disposition du destinataire\
+            \ (voir la description des niveaux de sécurité).\n  * Exemple : Règle\
+            \ spécifique à un contrat de tel ou tel assureur.\n  * Remarque : L’implé\
+            mentation de ce type de contrôles dépend du périmètre considéré.\n\n\n\
+            * **E0080** : Validation contexte dossier incorrecte. Le niveau de sé\
+            vérité associé à cette erreur indique si le document est mis ou non à\
+            \ disposition du destinataire (voir la description des niveaux de sécurité\
+            ).\n  * Exemple : La note d’honoraire est émise à tort avant le rapport\
+            \ d’expertise.\n\n\n* **E0081** : Validation contexte dossier spécifique\
+            \ client incorrecte. Le niveau de sévérité associé à cette erreur indique\
+            \ si le document est mis ou non à disposition du destinataire (voir la\
+            \ description des niveaux de sécurité).\n  * Exemple : La note d’honoraire\
+            \ est émise à tort avant le rapport d’expertise.\n\n\nLes niveaux de sé\
+            vérités possibles sont les suivants :\n\n* 0 : Information\n* 1 : Warning,\
+            \ anomalie non bloquante du document\n* 2 : Anomalie bloquante au niveau\
+            \ du document"
+          schema:
+            required:
+            - "idDemande"
+            - "rapport"
+            type: "object"
+            properties:
+              idDemande:
+                type: "string"
+              rapport:
+                $ref: "#/definitions/rapport"
+        403:
+          description: "Le compte utilisateur technique utilisé par le système client\
+            \ n’est pas habilité à utiliser ce service."
+        404:
+          description: "La demande de dépôt n'existe pas."
+    parameters:
+    - name: "idDemande"
+      in: "path"
+      required: true
+      type: "string"
+  /dossier/{noSinistre}/{noMission}/messages/{noAbonneEmetteur}/{idMessageEmetteur}:
+    get:
+      summary: "Consulter un message"
+      description: "Pour pouvoir consulter un message via ce service il est donc obligatoire\
+        \ que le message consulté soit porteur de l’information « identifiant du document\
+        \ chez l’émetteur ». \n\nLes messages qui ne portent pas cette information\
+        \ ne peuvent pas être consultés via ce service."
+      parameters:
+      - name: "base"
+        in: "query"
+        required: false
+        type: "string"
+        description: "Indique la base de travail."
+        default: "REELLE"
+        enum:
+        - "REELLE"
+        - "TEST"
+      - name: "formatMessageEdi"
+        in: "query"
+        required: false
+        type: "string"
+        description: "Format du message EDI présent dans la variable « flux » retourné\
+          . Attention : ne correspond pas au format du body la réponse HHTP qui lui\
+          \ json."
+        default: "XML3"
+        enum:
+        - "XML3"
+        - "PDF"
+        - "XML3_ET_PDF"
+      responses:
+        200:
+          description: "Le document a été trouvé et est retourné dans le corps de\
+            \ la réponse."
+          schema:
+            required:
+            - "idMessage"
+            type: "object"
+            properties:
+              idMessage:
+                type: "string"
+              flux:
+                type: "string"
+              pdf:
+                type: "string"
+              rapport:
+                $ref: "#/definitions/rapport"
+          examples:
+            application/json: "{\n    \"idMessage\": \"00867B91-00000001\",\n    \"\
+              flux\": \"dddddd\",\n    \"pdf\": \"lkjljl\",\n    \"rapport\": [\n\
+              \        {\n            \"erreurWarning\": {\n                \"code\"\
+              : \"kjhkhk\",\n                \"libelle\": \"kjkjhk\",\n          \
+              \      \"valeurAttendue\": \"kjhkjhk\",\n                \"valeurLue\"\
+              : \"kjhkjhkjh\",\n                \"regleGestion\": {\n            \
+              \        \"code\": \"kjhkhj\",\n                    \"description\"\
+              : \"kjhkjhk\",\n                    \"severite\": 3\n              \
+              \  }\n            }\n        },\n        {\n            \"erreurWarning\"\
+              : {\n                \"code\": \"kjhkhk\",\n                \"libelle\"\
+              : \"kjkjhk\",\n                \"valeurAttendue\": \"kjhkjhk\",\n  \
+              \              \"valeurLue\": \"kjhkjhkjh\",\n                \"regleGestion\"\
+              : {\n                    \"code\": \"kjhkhj\",\n                   \
+              \ \"description\": \"kjhkjhk\",\n                    \"severite\": 2\n\
+              \                }\n            }\n        }\n    ]\n}"
+        403:
+          description: "Le compte utilisateur technique utilisé par le système client\
+            \ n’est pas habilité à utiliser ce service."
+        404:
+          description: "Le document n'existe pas (ou l'abonné connecté n'est pas habilité\
+            \ à le consulter)."
+    parameters:
+    - name: "noSinistre"
+      in: "path"
+      required: true
+      type: "string"
+      description: "Numéro du sinistre tel qu'il a été déclaré par l'assureur."
+    - name: "noMission"
+      in: "path"
+      required: true
+      type: "string"
+      description: "Numéro de la mission pour le sinistre."
+    - name: "noAbonneEmetteur"
+      in: "path"
+      required: true
+      type: "string"
+      description: "Numéro de l'abonné émetteur du document."
+    - name: "idMessageEmetteur"
+      in: "path"
+      required: true
+      type: "string"
+      description: "Identifiant du message tel qu'il a été définit par l'émetteur\
+        \ du message."
+securityDefinitions:
+  Basic authentication:
+    type: "basic"
+definitions:
+  demandedepot:
+    type: "object"
+    properties:
+      formatMessageEdi:
+        type: "string"
+        enum:
+        - "Plat"
+        - "Lot80"
+        - "XMLv2"
+        - "XML_V3"
+        example: "XML_V3"
+      indicNormeFuture:
+        type: "boolean"
+      contexte:
+        type: "string"
+        enum:
+        - "IRD"
+      messages:
+        type: "array"
+        items:
+          required:
+          - "message"
+          type: "object"
+          properties:
+            message:
+              required:
+              - "flux"
+              - "typeMessage"
+              type: "object"
+              properties:
+                typeMessage:
+                  required:
+                  - "codeMessage"
+                  - "relMessage"
+                  - "verMessage"
+                  type: "object"
+                  description: "A ce jour, le seul message accepté est le REC (65.01.01)"
+                  properties:
+                    codeMessage:
+                      type: "string"
+                      enum:
+                      - "65"
+                      minLength: 2
+                      maxLength: 2
+                    verMessage:
+                      type: "string"
+                      enum:
+                      - "01"
+                      minLength: 2
+                      maxLength: 2
+                    relMessage:
+                      type: "string"
+                      enum:
+                      - "01"
+                      minLength: 2
+                      maxLength: 2
+                sousTypeMessage:
+                  type: "string"
+                flux:
+                  type: "string"
+    description: "[Exemple de flux json](./def_demandedepot.json)\n"
+  rapport:
+    type: "object"
+    required:
+    - "erreurWarnings"
+    properties:
+      erreurWarnings:
+        type: "array"
+        items:
+          required:
+          - "code"
+          - "libelle"
+          - "regleGestion"
+          type: "object"
+          properties:
+            code:
+              type: "string"
+            libelle:
+              type: "string"
+            valeurAttendue:
+              type: "string"
+            valeurLue:
+              type: "string"
+            regleGestion:
+              required:
+              - "code"
+              type: "object"
+              properties:
+                code:
+                  type: "string"
+                description:
+                  type: "string"
+                severite:
+                  type: "string"
+    description: "[Exemple de flux json](./def_rapport.json)"
