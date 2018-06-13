@@ -25,10 +25,12 @@ spring:
 logging:
   level:
     eu.stelliant: DEBUG
-    org.springframework: INFO
+    org.springframework.web.client: INFO
+    com.darva: DEBUG
 
 irsi:
   api:
-    baseUrl: https://irsi.vabf.darva.com
+    baseUrl: https://irsi.vabf.darva.com/domaines/ird/assureurs/{codeAssureur}/irsi/edi/v1
     username: 28953wssdgen
     password: 28953wssdgen
+    debugging: false
