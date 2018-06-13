@@ -70,8 +70,12 @@ paths:
         \ par l'émetteur du message pour indiquer une version de pièce jointe. Le\
         \ contenu est libre (chaine de caractères)."
       consumes:
-      - "application/json"
+      - "multipart/form-data"
       parameters:
+      - name: "codeAssureur"
+        in: "path"
+        required: "true"
+        type:
       - name: "base"
         in: "query"
         required: false
@@ -88,8 +92,8 @@ paths:
         description: "Permet l’utilisation du service en mode test. Valorisé à « true\
           \ », aucune mise à jour n’est enregistrée dans le système."
         default: false
-      - name: "body"
-        in: "body"
+      - name: "demandeDepot"
+        in: "formData"
         required: true
         schema:
           $ref: "#/definitions/demandedepot"
@@ -137,6 +141,13 @@ paths:
         403:
           description: "Le compte utilisateur technique utilisé par le système client\
             \ n’est pas habilité à utiliser ce service."
+    parameters:
+    - name: "codeAssureur"
+      in: "path"
+      required: true
+      type: "string"
+      description: "Le code GTA de l'assureur proprement-dit \
+                  \ Le code complémentaire assureur si nécessaire"
   /demandesdepots/{idDemande}:
     get:
       summary: "Connaître l'état d'une demande de dépôts de documents."
@@ -267,6 +278,12 @@ paths:
         404:
           description: "La demande de dépôt n'existe pas."
     parameters:
+    - name: "codeAssureur"
+      in: "path"
+      required: true
+      type: "string"
+      description: "Le code GTA de l'assureur proprement-dit \
+                  \ Le code complémentaire assureur si nécessaire"
     - name: "idDemande"
       in: "path"
       required: true
@@ -340,6 +357,12 @@ paths:
           description: "Le document n'existe pas (ou l'abonné connecté n'est pas habilité\
             \ à le consulter)."
     parameters:
+    - name: "codeAssureur"
+      in: "path"
+      required: true
+      type: "string"
+      description: "Le code GTA de l'assureur proprement-dit \
+                    \ Le code complémentaire assureur si nécessaire"
     - name: "noSinistre"
       in: "path"
       required: true
@@ -371,10 +394,7 @@ definitions:
       formatMessageEdi:
         type: "string"
         enum:
-        - "Plat"
-        - "Lot80"
-        - "XMLv2"
-        - "XML_V3"
+        - "XML3"
         example: "XML_V3"
       indicNormeFuture:
         type: "boolean"
@@ -383,48 +403,44 @@ definitions:
         enum:
         - "IRD"
       messages:
-        type: "array"
-        items:
-          required:
-          - "message"
-          type: "object"
-          properties:
-            message:
-              required:
-              - "flux"
-              - "typeMessage"
-              type: "object"
-              properties:
-                typeMessage:
-                  required:
-                  - "codeMessage"
-                  - "relMessage"
-                  - "verMessage"
-                  type: "object"
-                  description: "A ce jour, le seul message accepté est le REC (65.01.01)"
-                  properties:
-                    codeMessage:
-                      type: "string"
-                      enum:
-                      - "65"
-                      minLength: 2
-                      maxLength: 2
-                    verMessage:
-                      type: "string"
-                      enum:
-                      - "01"
-                      minLength: 2
-                      maxLength: 2
-                    relMessage:
-                      type: "string"
-                      enum:
-                      - "01"
-                      minLength: 2
-                      maxLength: 2
-                sousTypeMessage:
-                  type: "string"
-                flux:
-                  type: "string"
+        required:
+        - "message"
+        type: "object"
+        properties:
+          message:
+            required:
+            - "flux"
+            - "typeMessage"
+            type: "object"
+            properties:
+              typeMessage:
+                required:
+                - "codeMessage"
+                - "relMessage"
+                - "verMessage"
+                type: "object"
+                description: "A ce jour, le seul message accepté est le REC (65.01.01)"
+                properties:
+                  codeMessage:
+                    type: "string"
+                    enum:
+                    - "65"
+                    minLength: 2
+                    maxLength: 2
+                  verMessage:
+                    type: "string"
+                    enum:
+                    - "01"
+                    minLength: 2
+                    maxLength: 2
+                  relMessage:
+                    type: "string"
+                    enum:
+                    - "01"
+                    minLength: 2
+                    maxLength: 2
+              flux:
+                type: "string"
     description: "[Exemple de flux json](./def_demandedepot.json)\n"
   rapport:
     type: "object"
