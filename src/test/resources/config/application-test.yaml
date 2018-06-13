@@ -2,7 +2,7 @@
 # Spring Boot configuration for the "test" profile.
 #
 # This configuration overrides the application.yaml file and
-# inherit/extend the application-local.yaml.
+# inherit/extend the application-vabf.yaml.
 # ===================================================================
 # ===================================================================
 # Standard Spring Boot properties.
@@ -13,4 +13,4 @@
 spring:
     profiles:
         active: test
-        include: local
+        include: vabf
