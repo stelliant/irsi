@@ -22,10 +22,6 @@ public class ApiConfig {
 
   @Autowired
   ApiProperties properties;
-  @Autowired
-  RestTemplate restTemplate;
-  @Autowired
-  DefaultApi defaultApi;
 
   @Bean
   public RestTemplate restTemplate(RestTemplateBuilder builder) throws Exception {
@@ -33,7 +29,7 @@ public class ApiConfig {
     SSLContext sslContext = new SSLContextBuilder()
         .create()
         .loadTrustMaterial(
-            ResourceUtils.getFile(properties.getApi().getTruststore()),
+            ResourceUtils.getURL(properties.getApi().getTruststore()),
             properties.getApi().getStorepass().toCharArray()
         ).build();
 
@@ -47,7 +43,7 @@ public class ApiConfig {
   }
 
   @Bean
-  public DefaultApi defaultApi() {
+  public DefaultApi defaultApi(RestTemplate restTemplate) {
 
     if (properties.getApi().getDebugging()) {
       restTemplate.setRequestFactory(new BufferingClientHttpRequestFactory(restTemplate.getRequestFactory()));
