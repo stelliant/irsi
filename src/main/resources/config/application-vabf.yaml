@@ -31,9 +31,11 @@ logging:
 
 irsi:
   api:
-    truststore: classpath:security/keystore.pks
-    storepass: storepass
-    baseUrl: https://irsi.vabf.darva.com/domaines/ird/assureurs/{codeAssureur}/irsi/edi/v1
-    username: 28953wssdgen
-    password: 28953wssdgen
-    debugging: false
+    host: https://irsi.vabf.darva.com/domaines/ird/assureurs/{codeAssureur}/irsi/edi/v1
+    ssl:
+      truststore: classpath:security/keystore.pks
+      storepass: storepass
+    auth:
+      username: 28953wssdgen
+      password: 28953wssdgen
+    debugging: true

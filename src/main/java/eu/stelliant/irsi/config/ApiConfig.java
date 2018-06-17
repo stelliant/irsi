@@ -7,7 +7,6 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,11 +16,14 @@ import org.springframework.util.ResourceUtils;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@EnableConfigurationProperties({ApiProperties.class})
 public class ApiConfig {
 
+  private final ApiProperties properties;
+
   @Autowired
-  ApiProperties properties;
+  public ApiConfig(ApiProperties properties) {
+    this.properties = properties;
+  }
 
   @Bean
   public RestTemplate restTemplate(RestTemplateBuilder builder) throws Exception {
@@ -29,8 +31,8 @@ public class ApiConfig {
     SSLContext sslContext = new SSLContextBuilder()
         .create()
         .loadTrustMaterial(
-            ResourceUtils.getURL(properties.getApi().getTruststore()),
-            properties.getApi().getStorepass().toCharArray()
+            ResourceUtils.getURL(properties.getApi().getSsl().getTruststore()),
+            properties.getApi().getSsl().getStorepass().toCharArray()
         ).build();
 
     HttpClient client = HttpClients.custom()
@@ -52,9 +54,10 @@ public class ApiConfig {
     if (properties.getApi().getDebugging()) {
       apiClient.setDebugging(true);
     }
-    apiClient.setBasePath(properties.getApi().getBaseUrl());
-    apiClient.setUsername(properties.getApi().getUsername());
-    apiClient.setPassword(properties.getApi().getPassword());
+    apiClient.setBasePath(properties.getApi().getHost());
+    apiClient.setUsername(properties.getApi().getAuth().getUsername());
+    apiClient.setPassword(properties.getApi().getAuth().getPassword());
+
     return new DefaultApi(apiClient);
   }
 
